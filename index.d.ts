@@ -29,5 +29,5 @@ declare module '@eslym/tinybars/rollup' {
         extensions?: string[];
     };
 
-    export default function tinybars(options: TinyBarsRollupOptions = {}): Plugin;
+    export default function tinybars(options?: TinyBarsRollupOptions): Plugin;
 }
