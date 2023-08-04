@@ -1,0 +1,42 @@
+{
+    "name": "@eslym/tinybars",
+    "version": "1.0.0",
+    "description": "tiny handlebars, not for process user input",
+    "type": "module",
+    "main": "dist/index.js",
+    "author": "0nepeop1e",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/eslym/tinybars.git"
+    },
+    "scripts": {
+        "build": "rollup -c",
+        "format": "prettier . --write",
+        "prepare": "husky install"
+    },
+    "devDependencies": {
+        "@handlebars/parser": "^2.1.0",
+        "@rollup/plugin-commonjs": "^25.0.3",
+        "@rollup/plugin-node-resolve": "^15.1.0",
+        "@rollup/plugin-typescript": "^11.1.2",
+        "husky": "^8.0.0",
+        "prettier": "^2.0.0",
+        "pretty-quick": "^3.1.3",
+        "rollup": "^3.27.1",
+        "source-map": "^0.7.4",
+        "tslib": "^2.6.1",
+        "typescript": "^5.1.6"
+    },
+    "exports": {
+        ".": {
+            "import": "./dist/index.js",
+            "require": "./dist/index.cjs"
+        },
+        "./runtime": {
+            "import": "./dist/runtime.js",
+            "require": "./dist/runtime.cjs"
+        }
+    },
+    "types": "./index.d.ts"
+}
