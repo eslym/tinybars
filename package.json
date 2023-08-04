@@ -1,6 +1,6 @@
 {
     "name": "@eslym/tinybars",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "tiny handlebars, not for process user input",
     "type": "module",
     "main": "dist/index.js",
@@ -15,6 +15,10 @@
         "format": "prettier . --write",
         "prepare": "husky install"
     },
+    "files": [
+        "dist/*.js",
+        "dist/*.cjs"
+    ],
     "devDependencies": {
         "@handlebars/parser": "^2.1.0",
         "@rollup/plugin-commonjs": "^25.0.3",
