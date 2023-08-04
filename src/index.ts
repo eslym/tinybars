@@ -169,10 +169,12 @@ function compileExpression(ast: Expression, ctx: CompileContext): SourceNode {
                 switch (ast.head) {
                     case 'root': {
                         sourceNode.add('root');
+                        ast.parts.shift();
                         break;
                     }
                     case 'this': {
                         sourceNode.add(ctx.inputVar!);
+                        ast.parts.shift();
                         break;
                     }
                     case 'key':
@@ -183,6 +185,7 @@ function compileExpression(ast: Expression, ctx: CompileContext): SourceNode {
                             );
                         }
                         sourceNode.add(`key${ctx.depth - 1}`);
+                        ast.parts.shift();
                         break;
                     }
                     default: {
