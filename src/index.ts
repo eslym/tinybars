@@ -268,7 +268,9 @@ export function compile(
     };
     const ast: AST.Program = parse(str, options);
     const sourceNode: SourceNode = new SourceNode();
-    sourceNode.add('export default function ');
+    sourceNode.add(
+        ctx.format === 'esm' ? 'export default function ' : 'module.exports = function '
+    );
     if (ctx.functionName) {
         sourceNode.add(ctx.functionName);
     }

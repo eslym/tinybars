@@ -18,5 +18,5 @@ declare module '@eslym/tinybars' {
 }
 
 declare module '@eslym/tinybars/runtime' {
-    export function escapeHTML(str: string): string;
+    export default function escapeHTML(str: string): string;
 }
