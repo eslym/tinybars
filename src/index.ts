@@ -78,6 +78,7 @@ function compileStatement(ast: Statement, ctx: CompileContext): SourceNode {
             if (ast.escaped) {
                 sourceNode.prepend('e(');
                 sourceNode.add(')');
+                ctx.imports.add({ var: 'e', from: '@eslym/tinybars/runtime' });
             }
             return sourceNode;
         }
@@ -271,8 +272,8 @@ export function compile(
     if (ctx.functionName) {
         sourceNode.add(ctx.functionName);
     }
-    sourceNode.add(`(${ctx.inputVar}, ${ctx.dataVar} = {}, e = escapeHTML){\n`);
-    sourceNode.add(`    const root = ${ctx.inputVar}};\n`);
+    sourceNode.add(`(${ctx.inputVar}, ${ctx.dataVar} = {}){\n`);
+    sourceNode.add(`    const root = ${ctx.inputVar};\n`);
     sourceNode.add(compileProgram(ast, ctx));
     sourceNode.add(';\n}');
     for (const { var: v, from } of ctx.imports) {
