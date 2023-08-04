@@ -1,4 +1,5 @@
 import { parse, type ParseOptions, type AST } from '@handlebars/parser';
+import type { RawSourceMap } from 'source-map';
 import { SourceNode } from 'source-map/lib/source-node.js';
 
 type Statement =
@@ -18,7 +19,7 @@ type Literal =
 
 type Expression = AST.SubExpression | AST.PathExpression | Literal;
 
-type CompileOptions = ParseOptions & {
+export type CompileOptions = ParseOptions & {
     inputVar?: string;
     dataVar?: string;
     functionName?: string;
@@ -278,7 +279,7 @@ function compileFunctionCall(ast: AST.MustacheStatement, ctx: CompileContext): S
 export function compile(
     str: string,
     options?: CompileOptions
-): { code: string; sourceMap: string } {
+): { code: string; sourceMap: RawSourceMap } {
     const ctx: CompileContext = {
         inputVar: '$t',
         dataVar: '$c',
@@ -312,6 +313,6 @@ export function compile(
     });
     return {
         code: res.code,
-        sourceMap: res.map.toString()
+        sourceMap: res.map.toJSON()
     };
 }

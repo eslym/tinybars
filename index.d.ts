@@ -20,3 +20,14 @@ declare module '@eslym/tinybars' {
 declare module '@eslym/tinybars/runtime' {
     export default function escapeHTML(str: string): string;
 }
+
+declare module '@eslym/tinybars/rollup' {
+    import type { Plugin } from 'rollup';
+    import type { CompileOptions } from '@eslym/tinybars';
+
+    export type TinyBarsRollupOptions = Omit<CompileOptions, 'format'> & {
+        extensions?: string[];
+    };
+
+    export default function tinybars(options: TinyBarsRollupOptions = {}): Plugin;
+}

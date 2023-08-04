@@ -1,6 +1,6 @@
 {
     "name": "@eslym/tinybars",
-    "version": "1.0.9",
+    "version": "1.0.10",
     "description": "tiny handlebars, not for process user input",
     "type": "module",
     "main": "dist/index.js",
@@ -41,6 +41,10 @@
         "./runtime": {
             "import": "./dist/runtime.js",
             "require": "./dist/runtime.cjs"
+        },
+        "./rollup": {
+            "import": "./dist/rollup.js",
+            "require": "./dist/rollup.cjs"
         }
     },
     "types": "./index.d.ts"

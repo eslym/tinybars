@@ -6,7 +6,8 @@ import commonjs from '@rollup/plugin-commonjs';
 const config = {
     input: {
         index: 'src/index.ts',
-        runtime: 'src/runtime.ts'
+        runtime: 'src/runtime.ts',
+        rollup: 'src/rollup.ts'
     },
     plugins: [ts(), resolve(), commonjs()]
 };
