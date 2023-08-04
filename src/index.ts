@@ -125,6 +125,24 @@ function compileStatement(ast: Statement, ctx: CompileContext): SourceNode {
                     sourceNode.add(')).join("")');
                     return sourceNode;
                 }
+                case 'with': {
+                    const sourceNode: SourceNode = new SourceNode(
+                        ast.loc.start.line,
+                        ast.loc.start.column,
+                        ctx.srcName ?? null
+                    );
+                    sourceNode.add('((val)=> (');
+                    sourceNode.add(
+                        compileProgram(ast.program, {
+                            ...ctx,
+                            inputVar: 'val'
+                        })
+                    );
+                    sourceNode.add('))(');
+                    sourceNode.add(compileExpression(ast.params[0] as Expression, ctx));
+                    sourceNode.add(')');
+                    return sourceNode;
+                }
                 default: {
                     throw new Error(
                         `Unexpected ${ast.path.original} at ${ast.loc.start.line}:${ast.loc.start.column}`
@@ -157,15 +175,15 @@ function compileExpression(ast: Expression, ctx: CompileContext): SourceNode {
                         sourceNode.add(ctx.inputVar!);
                         break;
                     }
-                    case '@key':
-                    case '@index': {
+                    case 'key':
+                    case 'index': {
                         if (ctx.depth === 0) {
                             throw new Error(
                                 `Unexpected ${ast.original} at ${ast.loc.start.line}:${ast.loc.start.column}`
                             );
                         }
                         sourceNode.add(`key${ctx.depth - 1}`);
-                        return sourceNode;
+                        break;
                     }
                     default: {
                         sourceNode.add(ctx.dataVar!);
