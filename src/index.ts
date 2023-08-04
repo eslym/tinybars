@@ -28,7 +28,7 @@ type CompileOptions = ParseOptions & {
 
 type CompileContext = CompileOptions & {
     depth: number;
-    imports: Set<{ var: string; from: string }>;
+    imports: Map<string, string>;
 };
 
 function compileProgram(ast: AST.Program, ctx: CompileContext): SourceNode {
@@ -78,7 +78,7 @@ function compileStatement(ast: Statement, ctx: CompileContext): SourceNode {
             if (ast.escaped) {
                 sourceNode.prepend('e(');
                 sourceNode.add(')');
-                ctx.imports.add({ var: 'e', from: '@eslym/tinybars/runtime' });
+                ctx.imports.set('e', '@eslym/tinybars/runtime');
             }
             return sourceNode;
         }
@@ -264,7 +264,7 @@ export function compile(
         format: 'esm',
         ...(options ?? {}),
         depth: 0,
-        imports: new Set()
+        imports: new Map()
     };
     const ast: AST.Program = parse(str, options);
     const sourceNode: SourceNode = new SourceNode();
@@ -274,9 +274,10 @@ export function compile(
     }
     sourceNode.add(`(${ctx.inputVar}, ${ctx.dataVar} = {}){\n`);
     sourceNode.add(`    const root = ${ctx.inputVar};\n`);
+    sourceNode.add(`    return `);
     sourceNode.add(compileProgram(ast, ctx));
     sourceNode.add(';\n}');
-    for (const { var: v, from } of ctx.imports) {
+    for (const [v, from] of ctx.imports) {
         if (ctx.format === 'esm') {
             sourceNode.prepend(`import ${v} from ${JSON.stringify(from)};\n`);
         } else {
