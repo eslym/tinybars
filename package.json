@@ -1,6 +1,6 @@
 {
     "name": "@eslym/tinybars",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "description": "tiny handlebars, not for process user input",
     "type": "module",
     "main": "dist/index.js",
@@ -17,7 +17,8 @@
     },
     "files": [
         "dist/*.js",
-        "dist/*.cjs"
+        "dist/*.cjs",
+        "index.d.ts"
     ],
     "devDependencies": {
         "@handlebars/parser": "^2.1.0",
