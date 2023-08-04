@@ -23,59 +23,57 @@ type CompileOptions = ParseOptions & {
     dataVar?: string;
     functionName?: string;
     omitComments?: boolean;
+    format?: 'esm' | 'cjs';
 };
 
-function compileProgram(
-    ast: AST.Program,
-    opts: CompileOptions & { depth: number },
-    scope: (SourceNode | string)[]
-): SourceNode {
+type CompileContext = CompileOptions & {
+    depth: number;
+    imports: Set<{ var: string; from: string }>;
+};
+
+function compileProgram(ast: AST.Program, ctx: CompileContext): SourceNode {
     const sourceNode = new SourceNode(
         ast.loc?.start?.line,
         ast.loc?.start?.column,
-        opts.srcName ?? null
+        ctx.srcName ?? null
     );
     sourceNode.add('""');
     if (ast.body && ast.body.length > 0) {
         for (let i = 0; i < ast.body.length; i++) {
             sourceNode.add(' + ');
-            sourceNode.add(compileStatement(ast.body[i] as Statement, opts, scope));
+            sourceNode.add(compileStatement(ast.body[i] as Statement, ctx));
         }
     }
     return sourceNode;
 }
 
-function compileStatement(
-    ast: Statement,
-    opts: CompileOptions & { depth: number },
-    scope: (string | SourceNode)[]
-): SourceNode {
+function compileStatement(ast: Statement, ctx: CompileContext): SourceNode {
     switch (ast.type) {
         case 'ContentStatement': {
             return new SourceNode(
                 ast.loc.start.line,
                 ast.loc.start.column,
-                opts.srcName ?? null,
+                ctx.srcName ?? null,
                 JSON.stringify(ast.value)
             );
         }
         case 'CommentStatement': {
-            if (opts?.omitComments) {
+            if (ctx?.omitComments) {
                 return new SourceNode();
             }
             return new SourceNode(
                 ast.loc.start.line,
                 ast.loc.start.column,
-                opts.srcName ?? null,
+                ctx.srcName ?? null,
                 `""/* ${ast.value.replace(/\*\//g, '')} */`
             );
         }
         case 'MustacheStatement': {
             const sourceNode: SourceNode = new SourceNode();
             if (ast.params.length > 0) {
-                sourceNode.add(compileFunctionCall(ast, opts, scope));
+                sourceNode.add(compileFunctionCall(ast, ctx));
             } else {
-                sourceNode.add(compileExpression(ast.path as Expression, opts, scope));
+                sourceNode.add(compileExpression(ast.path as Expression, ctx));
             }
             if (ast.escaped) {
                 sourceNode.prepend('e(');
@@ -90,11 +88,11 @@ function compileStatement(
                     const sourceNode: SourceNode = new SourceNode(
                         ast.loc.start.line,
                         ast.loc.start.column,
-                        opts.srcName ?? null
+                        ctx.srcName ?? null
                     );
-                    const condition = compileExpression(ast.params[0] as Expression, opts, scope);
-                    const positive = compileProgram(ast.program, opts, scope);
-                    const negative = ast.inverse ? compileProgram(ast.inverse, opts, scope) : '""';
+                    const condition = compileExpression(ast.params[0] as Expression, ctx);
+                    const positive = compileProgram(ast.program, ctx);
+                    const negative = ast.inverse ? compileProgram(ast.inverse, ctx) : '""';
                     const left = ast.path.original === 'if' ? positive : negative;
                     const right = ast.path.original === 'if' ? negative : positive;
                     sourceNode.add('(');
@@ -110,17 +108,18 @@ function compileStatement(
                     const sourceNode: SourceNode = new SourceNode(
                         ast.loc.start.line,
                         ast.loc.start.column,
-                        opts.srcName ?? null
+                        ctx.srcName ?? null
                     );
-                    const src = compileExpression(ast.params[0] as Expression, opts, scope);
-                    sourceNode.add('Object.keys(');
+                    const src = compileExpression(ast.params[0] as Expression, ctx);
+                    sourceNode.add('Object.entries(');
                     sourceNode.add(src);
-                    sourceNode.add(`).map(key${opts.depth} => (`);
+                    sourceNode.add(`).map(([key${ctx.depth}, val${ctx.depth}]) => (`);
                     sourceNode.add(
-                        compileProgram(ast.program, { ...opts, depth: opts.depth + 1 }, [
-                            ...scope,
-                            `[key${opts.depth}]`
-                        ])
+                        compileProgram(ast.program, {
+                            ...ctx,
+                            depth: ctx.depth + 1,
+                            inputVar: `val${ctx.depth}`
+                        })
                     );
                     sourceNode.add(')).join("")');
                     return sourceNode;
@@ -139,49 +138,41 @@ function compileStatement(
     }
 }
 
-function compileExpression(
-    ast: Expression,
-    opts: CompileOptions & { depth: number },
-    scope: (string | SourceNode)[]
-): SourceNode {
+function compileExpression(ast: Expression, ctx: CompileContext): SourceNode {
     switch (ast.type) {
         case 'PathExpression': {
             const sourceNode: SourceNode = new SourceNode(
                 ast.loc.start.line,
                 ast.loc.start.column,
-                opts.srcName ?? null
+                ctx.srcName ?? null
             );
             if (ast.data) {
-                switch (ast.original) {
+                switch (ast.head) {
+                    case 'root': {
+                        sourceNode.add('root');
+                        break;
+                    }
+                    case 'this': {
+                        sourceNode.add(ctx.inputVar!);
+                        break;
+                    }
                     case '@key':
                     case '@index': {
-                        if (opts.depth === 0) {
+                        if (ctx.depth === 0) {
                             throw new Error(
                                 `Unexpected ${ast.original} at ${ast.loc.start.line}:${ast.loc.start.column}`
                             );
                         }
-                        sourceNode.add(`key${opts.depth - 1}`);
+                        sourceNode.add(`key${ctx.depth - 1}`);
                         return sourceNode;
                     }
-                }
-                switch (ast.head) {
-                    case 'root': {
-                        sourceNode.add(opts.inputVar!);
-                        break;
-                    }
-                    case 'this': {
-                        sourceNode.add(opts.inputVar!);
-                        sourceNode.add(scope);
-                        break;
-                    }
                     default: {
-                        sourceNode.add(opts.dataVar!);
+                        sourceNode.add(ctx.dataVar!);
                         break;
                     }
                 }
             } else {
-                sourceNode.add(opts.inputVar!);
-                sourceNode.add(scope);
+                sourceNode.add(ctx.inputVar!);
             }
             sourceNode.add(
                 ast.parts
@@ -189,7 +180,7 @@ function compileExpression(
                         '[',
                         typeof part === 'string'
                             ? JSON.stringify(part)
-                            : compileExpression(part, opts, scope),
+                            : compileExpression(part, ctx),
                         ']'
                     ])
                     .flat()
@@ -200,7 +191,7 @@ function compileExpression(
             return new SourceNode(
                 ast.loc.start.line,
                 ast.loc.start.column,
-                opts.srcName ?? null,
+                ctx.srcName ?? null,
                 JSON.stringify(ast.value)
             );
         }
@@ -208,7 +199,7 @@ function compileExpression(
             return new SourceNode(
                 ast.loc.start.line,
                 ast.loc.start.column,
-                opts.srcName ?? null,
+                ctx.srcName ?? null,
                 ast.value ? 'true' : 'false'
             );
         }
@@ -216,7 +207,7 @@ function compileExpression(
             return new SourceNode(
                 ast.loc.start.line,
                 ast.loc.start.column,
-                opts.srcName ?? null,
+                ctx.srcName ?? null,
                 ast.value.toString()
             );
         }
@@ -224,7 +215,7 @@ function compileExpression(
             return new SourceNode(
                 ast.loc.start.line,
                 ast.loc.start.column,
-                opts.srcName ?? null,
+                ctx.srcName ?? null,
                 'undefined'
             );
         }
@@ -232,7 +223,7 @@ function compileExpression(
             return new SourceNode(
                 ast.loc.start.line,
                 ast.loc.start.column,
-                opts.srcName ?? null,
+                ctx.srcName ?? null,
                 'null'
             );
         }
@@ -244,20 +235,16 @@ function compileExpression(
     }
 }
 
-function compileFunctionCall(
-    ast: AST.MustacheStatement,
-    opts: CompileOptions & { depth: number },
-    scope: (string | SourceNode)[]
-): SourceNode {
+function compileFunctionCall(ast: AST.MustacheStatement, ctx: CompileContext): SourceNode {
     const sourceNode: SourceNode = new SourceNode(
         ast.loc.start.line,
         ast.loc.start.column,
-        opts?.srcName ?? null
+        ctx?.srcName ?? null
     );
-    sourceNode.add(compileExpression(ast.path as Expression, opts, scope));
+    sourceNode.add(compileExpression(ast.path as Expression, ctx));
     sourceNode.add('(');
     for (let i = 0; i < ast.params.length; i++) {
-        sourceNode.add(compileExpression(ast.params[i] as Expression, opts, scope));
+        sourceNode.add(compileExpression(ast.params[i] as Expression, ctx));
         if (i < ast.params.length - 1) {
             sourceNode.add(', ');
         }
@@ -270,21 +257,31 @@ export function compile(
     str: string,
     options?: CompileOptions
 ): { code: string; sourceMap: string } {
-    options = {
-        inputVar: 'input',
-        dataVar: 'data',
-        ...(options ?? {})
+    const ctx: CompileContext = {
+        inputVar: '$t',
+        dataVar: '$c',
+        format: 'esm',
+        ...(options ?? {}),
+        depth: 0,
+        imports: new Set()
     };
     const ast: AST.Program = parse(str, options);
     const sourceNode: SourceNode = new SourceNode();
-    sourceNode.add('import escapeHTML from "@eslym/tinybars/runtime";\n\n');
     sourceNode.add('export default function ');
-    if (options.functionName) {
-        sourceNode.add(options.functionName);
+    if (ctx.functionName) {
+        sourceNode.add(ctx.functionName);
     }
-    sourceNode.add(`(${options.inputVar}, ${options.dataVar} = {}, e = escapeHTML){\n    return `);
-    sourceNode.add(compileProgram(ast, { ...options!, depth: 0 }, []));
+    sourceNode.add(`(${ctx.inputVar}, ${ctx.dataVar} = {}, e = escapeHTML){\n`);
+    sourceNode.add(`    const root = ${ctx.inputVar}};\n`);
+    sourceNode.add(compileProgram(ast, ctx));
     sourceNode.add(';\n}');
+    for (const { var: v, from } of ctx.imports) {
+        if (ctx.format === 'esm') {
+            sourceNode.prepend(`import ${v} from ${JSON.stringify(from)};\n`);
+        } else {
+            sourceNode.prepend(`const ${v} = require(${JSON.stringify(from)});\n`);
+        }
+    }
     const res = sourceNode.toStringWithSourceMap({
         file: options?.srcName
     });
