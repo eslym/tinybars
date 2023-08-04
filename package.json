@@ -1,6 +1,6 @@
 {
     "name": "@eslym/tinybars",
-    "version": "1.0.5",
+    "version": "1.0.6",
     "description": "tiny handlebars, not for process user input",
     "type": "module",
     "main": "dist/index.js",
